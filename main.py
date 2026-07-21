@@ -7,7 +7,9 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
 if not BOT_TOKEN:
     raise RuntimeError("❌ BOT_TOKEN не найден в переменных окружения!")
 
-# Тексты на трёх языках
+ROBLOX_LINK = "https://roblox.com.ki/games/142823291/Murder-Mystery-2?privateServerLinkCode=82736672637218562960609625814503"
+CHANNEL_LINK = "https://t.me/starpetsgg"
+
 texts = {
     "ru": {
         "welcome": (
@@ -30,7 +32,6 @@ texts = {
         "btn_spin": "🎰 Крутить рулетку",
         "btn_channel": "📢 Наш канал",
         "already_spun": "⏳ Ты уже крутил рулетку!\nСледующий спин через 23ч 58мин⏳",
-        "channel_text": "📢 Наш канал: @starpetsgg\nНажми на кнопку ниже, чтобы перейти!",
     },
     "en": {
         "welcome": (
@@ -53,7 +54,6 @@ texts = {
         "btn_spin": "🎰 Spin the roulette",
         "btn_channel": "📢 Our channel",
         "already_spun": "⏳ You've already spun the roulette!\nNext spin in 23h 58min⏳",
-        "channel_text": "📢 Our channel: @starpetsgg\nClick the button below to go!",
     },
     "es": {
         "welcome": (
@@ -76,9 +76,23 @@ texts = {
         "btn_spin": "🎰 Girar la ruleta",
         "btn_channel": "📢 Nuestro canal",
         "already_spun": "⏳ ¡Ya has girado la ruleta!\nPróximo giro en 23h 58min⏳",
-        "channel_text": "📢 Nuestro canal: @starpetsgg\n¡Haz clic en el botón de abajo para ir!",
     },
 }
+
+
+def main_keyboard(lang: str, has_spun: bool):
+    """Клавиатура главного меню. Если already_spun — кнопка-ссылка, иначе callback"""
+    t = texts[lang]
+    if has_spun:
+        spin_button = InlineKeyboardButton(t["btn_spin"], callback_data="already_spun")
+    else:
+        spin_button = InlineKeyboardButton(t["btn_spin"], url=ROBLOX_LINK)
+
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(t["btn_rules"], callback_data="show_rules")],
+        [spin_button],
+        [InlineKeyboardButton(t["btn_channel"], url=CHANNEL_LINK)],
+    ])
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -97,23 +111,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lang: str):
-    """Показать главное меню с тремя кнопками"""
+    """Показать главное меню"""
     t = texts[lang]
-    keyboard = [
-        [InlineKeyboardButton(t["btn_rules"], callback_data="show_rules")],
-        [InlineKeyboardButton(t["btn_spin"], callback_data="spin")],
-        [InlineKeyboardButton(t["btn_channel"], callback_data="channel")],
-    ]
+    has_spun = context.user_data.get("has_spun", False)
 
     if update.callback_query:
         await update.callback_query.edit_message_text(
             t["welcome"],
-            reply_markup=InlineKeyboardMarkup(keyboard),
+            reply_markup=main_keyboard(lang, has_spun),
         )
     else:
         await update.message.reply_text(
             t["welcome"],
-            reply_markup=InlineKeyboardMarkup(keyboard),
+            reply_markup=main_keyboard(lang, has_spun),
         )
 
 
@@ -125,46 +135,29 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "ru")
     t = texts[lang]
 
+    # --- Выбор языка ---
     if data.startswith("lang_"):
         lang = data.split("_")[1]
         context.user_data["lang"] = lang
         await show_main_menu(update, context, lang)
         return
 
+    # --- Правила ---
     if data == "show_rules":
         await query.edit_message_text(
             t["rules"],
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")],
+                [InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu")],
             ]),
         )
         return
 
-    if data == "spin":
-        await query.edit_message_text(
-            t["already_spun"],
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")],
-            ]),
-        )
+    # --- Уже крутил (заглушка) ---
+    if data == "already_spun":
+        await query.answer(text=t["already_spun"], show_alert=True)
         return
 
-    if data == "channel":
-        keyboard = [
-            [
-                InlineKeyboardButton(
-                    "🔗 Перейти в канал / Go to channel / Ir al canal",
-                    url="https://t.me/starpetsgg",
-                )
-            ],
-            [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")],
-        ]
-        await query.edit_message_text(
-            t["channel_text"],
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
-        return
-
+    # --- Назад в меню ---
     if data == "back_to_menu":
         await show_main_menu(update, context, lang)
         return
