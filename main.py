@@ -1,11 +1,16 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 import os
-from dotenv import load_dotenv
 
-load_dotenv()  # загружает переменные из .env
-
+# Пробуем взять из переменных окружения, иначе из .env
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    from dotenv import load_dotenv
+    load_dotenv()
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN не найден ни в окружении, ни в .env")
 
 # Тексты на трёх языках
 texts = {
@@ -30,10 +35,7 @@ texts = {
         "btn_spin": "🎰 Крутить рулетку",
         "btn_channel": "📢 Наш канал",
         "already_spun": "⏳ Ты уже крутил рулетку!\nСледующий спин через 23ч 58мин⏳",
-        "spin_result": "🎰 Результат: {}",
-        "win": "ПОБЕДА! 🎉",
-        "lose": "ПРОИГРЫШ! 😢",
-        "channel_text": "📢 Наш канал: @starpetsgg\nНажми на кнопку ниже, чтобы перейти!"
+        "channel_text": "📢 Наш канал: @starpetsgg\nНажми на кнопку ниже, чтобы перейти!",
     },
     "en": {
         "welcome": (
@@ -56,10 +58,7 @@ texts = {
         "btn_spin": "🎰 Spin the roulette",
         "btn_channel": "📢 Our channel",
         "already_spun": "⏳ You've already spun the roulette!\nNext spin in 23h 58min⏳",
-        "spin_result": "🎰 Result: {}",
-        "win": "WIN! 🎉",
-        "lose": "LOSE! 😢",
-        "channel_text": "📢 Our channel: @starpetsgg\nClick the button below to go!"
+        "channel_text": "📢 Our channel: @starpetsgg\nClick the button below to go!",
     },
     "es": {
         "welcome": (
@@ -82,11 +81,8 @@ texts = {
         "btn_spin": "🎰 Girar la ruleta",
         "btn_channel": "📢 Nuestro canal",
         "already_spun": "⏳ ¡Ya has girado la ruleta!\nPróximo giro en 23h 58min⏳",
-        "spin_result": "🎰 Resultado: {}",
-        "win": "¡VICTORIA! 🎉",
-        "lose": "¡DERROTA! 😢",
-        "channel_text": "📢 Nuestro canal: @starpetsgg\n¡Haz clic en el botón de abajo para ir!"
-    }
+        "channel_text": "📢 Nuestro canal: @starpetsgg\n¡Haz clic en el botón de abajo para ir!",
+    },
 }
 
 
@@ -117,12 +113,12 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lan
     if update.callback_query:
         await update.callback_query.edit_message_text(
             t["welcome"],
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
     else:
         await update.message.reply_text(
             t["welcome"],
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
 
 
@@ -146,8 +142,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             t["rules"],
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")]
-            ])
+                [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")],
+            ]),
         )
         return
 
@@ -156,20 +152,25 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             t["already_spun"],
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")]
-            ])
+                [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")],
+            ]),
         )
         return
 
     # --- Наш канал (Ссылка) ---
     if data == "channel":
         keyboard = [
-            [InlineKeyboardButton("🔗 Перейти в канал / Go to channel / Ir al canal", url="https://t.me/starpetsgg")],
-            [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")]
+            [
+                InlineKeyboardButton(
+                    "🔗 Перейти в канал / Go to channel / Ir al canal",
+                    url="https://t.me/starpetsgg",
+                )
+            ],
+            [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")],
         ]
         await query.edit_message_text(
             t["channel_text"],
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
         return
 
@@ -186,3 +187,6 @@ def main():
     print("🤖 Бот запущен...")
     app.run_polling()
 
+
+if __name__ == "__main__":
+    main()
