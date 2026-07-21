@@ -31,7 +31,6 @@ texts = {
         "btn_rules": "📖 Правила",
         "btn_spin": "🎰 Крутить рулетку",
         "btn_channel": "📢 Наш канал",
-        "already_spun": "⏳ Ты уже крутил рулетку!\nСледующий спин через 23ч 58мин⏳",
     },
     "en": {
         "welcome": (
@@ -53,7 +52,6 @@ texts = {
         "btn_rules": "📖 Rules",
         "btn_spin": "🎰 Spin the roulette",
         "btn_channel": "📢 Our channel",
-        "already_spun": "⏳ You've already spun the roulette!\nNext spin in 23h 58min⏳",
     },
     "es": {
         "welcome": (
@@ -75,28 +73,21 @@ texts = {
         "btn_rules": "📖 Reglas",
         "btn_spin": "🎰 Girar la ruleta",
         "btn_channel": "📢 Nuestro canal",
-        "already_spun": "⏳ ¡Ya has girado la ruleta!\nPróximo giro en 23h 58min⏳",
     },
 }
 
 
-def main_keyboard(lang: str, has_spun: bool):
-    """Клавиатура главного меню. Если already_spun — кнопка-ссылка, иначе callback"""
+def main_keyboard(lang: str):
+    """Клавиатура главного меню — всегда ссылки"""
     t = texts[lang]
-    if has_spun:
-        spin_button = InlineKeyboardButton(t["btn_spin"], callback_data="already_spun")
-    else:
-        spin_button = InlineKeyboardButton(t["btn_spin"], url=ROBLOX_LINK)
-
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(t["btn_rules"], callback_data="show_rules")],
-        [spin_button],
+        [InlineKeyboardButton(t["btn_spin"], url=ROBLOX_LINK)],
         [InlineKeyboardButton(t["btn_channel"], url=CHANNEL_LINK)],
     ])
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """При /start — выбор языка"""
     keyboard = [
         [
             InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"),
@@ -111,19 +102,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, lang: str):
-    """Показать главное меню"""
     t = texts[lang]
-    has_spun = context.user_data.get("has_spun", False)
-
     if update.callback_query:
         await update.callback_query.edit_message_text(
             t["welcome"],
-            reply_markup=main_keyboard(lang, has_spun),
+            reply_markup=main_keyboard(lang),
         )
     else:
         await update.message.reply_text(
             t["welcome"],
-            reply_markup=main_keyboard(lang, has_spun),
+            reply_markup=main_keyboard(lang),
         )
 
 
@@ -135,14 +123,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "ru")
     t = texts[lang]
 
-    # --- Выбор языка ---
     if data.startswith("lang_"):
         lang = data.split("_")[1]
         context.user_data["lang"] = lang
         await show_main_menu(update, context, lang)
         return
 
-    # --- Правила ---
     if data == "show_rules":
         await query.edit_message_text(
             t["rules"],
@@ -152,12 +138,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # --- Уже крутил (заглушка) ---
-    if data == "already_spun":
-        await query.answer(text=t["already_spun"], show_alert=True)
-        return
-
-    # --- Назад в меню ---
     if data == "back_to_menu":
         await show_main_menu(update, context, lang)
         return
