@@ -28,9 +28,13 @@ texts = {
             "4️⃣  При проигрыше возвращайся завтра!\n\n"
             "🎯  Удачи!"
         ),
-        "btn_rules": "📖 Правила",
         "btn_spin": "🎰 Крутить рулетку",
+        "btn_rules": "📖 Правила",
         "btn_channel": "📢 Наш канал",
+        "choose_prize": "🎁 Выбери свой приз:",
+        "prize_alien": "👽 Alienbeam",
+        "prize_heart": "💖 Heart Wand",
+        "prize_snow": "🥶 Snowcannon",
     },
     "en": {
         "welcome": (
@@ -49,9 +53,13 @@ texts = {
             "4️⃣ If you lose, come back tomorrow!\n\n"
             "🎯 Good luck!"
         ),
-        "btn_rules": "📖 Rules",
         "btn_spin": "🎰 Spin the roulette",
+        "btn_rules": "📖 Rules",
         "btn_channel": "📢 Our channel",
+        "choose_prize": "🎁 Choose your prize:",
+        "prize_alien": "👽 Alienbeam",
+        "prize_heart": "💖 Heart Wand",
+        "prize_snow": "🥶 Snowcannon",
     },
     "es": {
         "welcome": (
@@ -70,20 +78,35 @@ texts = {
             "4️⃣ Si pierdes, ¡vuelve mañana!\n\n"
             "🎯 ¡Buena suerte!"
         ),
-        "btn_rules": "📖 Reglas",
         "btn_spin": "🎰 Girar la ruleta",
+        "btn_rules": "📖 Reglas",
         "btn_channel": "📢 Nuestro canal",
+        "choose_prize": "🎁 Elige tu premio:",
+        "prize_alien": "👽 Alienbeam",
+        "prize_heart": "💖 Heart Wand",
+        "prize_snow": "🥶 Snowcannon",
     },
 }
 
 
 def main_keyboard(lang: str):
-    """Клавиатура главного меню — всегда ссылки"""
+    """Главное меню: Крутить, Правила, Канал"""
     t = texts[lang]
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton(t["btn_spin"], callback_data="spin")],
         [InlineKeyboardButton(t["btn_rules"], callback_data="show_rules")],
-        [InlineKeyboardButton(t["btn_spin"], url=ROBLOX_LINK)],
         [InlineKeyboardButton(t["btn_channel"], url=CHANNEL_LINK)],
+    ])
+
+
+def prize_keyboard(lang: str):
+    """Клавиатура выбора приза — все кнопки ведут на ссылку"""
+    t = texts[lang]
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(t["prize_alien"], url=ROBLOX_LINK)],
+        [InlineKeyboardButton(t["prize_heart"], url=ROBLOX_LINK)],
+        [InlineKeyboardButton(t["prize_snow"], url=ROBLOX_LINK)],
+        [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")],
     ])
 
 
@@ -123,21 +146,32 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "ru")
     t = texts[lang]
 
+    # --- Выбор языка ---
     if data.startswith("lang_"):
         lang = data.split("_")[1]
         context.user_data["lang"] = lang
         await show_main_menu(update, context, lang)
         return
 
+    # --- Крутить рулетку → выбор приза ---
+    if data == "spin":
+        await query.edit_message_text(
+            t["choose_prize"],
+            reply_markup=prize_keyboard(lang),
+        )
+        return
+
+    # --- Правила ---
     if data == "show_rules":
         await query.edit_message_text(
             t["rules"],
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Назад", callback_data="back_to_menu")],
+                [InlineKeyboardButton("🔙 Назад / Back / Atrás", callback_data="back_to_menu")],
             ]),
         )
         return
 
+    # --- Назад в меню ---
     if data == "back_to_menu":
         await show_main_menu(update, context, lang)
         return
