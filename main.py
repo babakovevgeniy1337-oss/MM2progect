@@ -2,15 +2,10 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 import os
 
-# Пробуем взять из переменных окружения, иначе из .env
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-if not BOT_TOKEN:
-    from dotenv import load_dotenv
-    load_dotenv()
-    BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
 
 if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN не найден ни в окружении, ни в .env")
+    raise RuntimeError("❌ BOT_TOKEN не найден в переменных окружения!")
 
 # Тексты на трёх языках
 texts = {
@@ -130,14 +125,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "ru")
     t = texts[lang]
 
-    # --- Пользователь выбрал язык ---
     if data.startswith("lang_"):
         lang = data.split("_")[1]
         context.user_data["lang"] = lang
         await show_main_menu(update, context, lang)
         return
 
-    # --- Показать правила ---
     if data == "show_rules":
         await query.edit_message_text(
             t["rules"],
@@ -147,7 +140,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # --- Крутить рулетку ---
     if data == "spin":
         await query.edit_message_text(
             t["already_spun"],
@@ -157,7 +149,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # --- Наш канал (Ссылка) ---
     if data == "channel":
         keyboard = [
             [
@@ -174,7 +165,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # --- Назад в меню ---
     if data == "back_to_menu":
         await show_main_menu(update, context, lang)
         return
